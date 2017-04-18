@@ -23,11 +23,35 @@ library(lubridate)
 library(httr)
 library(rvest)
 library(tidyverse)
+library(dplyr)
+library(tibble)  
+library(lubridate)
+library(purrr)  
+library(tidyr)
 
 
 #autenticação
 keys <- spotifyOAuth("spotify-r-project","58fccb9a51434b5bab3cf8ce2274b997","4927c42e006a4c46a2308f79757bd582")
+ 
 
+
+lolla2017_playlist <- getPlaylistSongs("lollabr", "1mHoPn6JpbtWtoBuvSXrVm", token = keys) %>%
+  mutate(artistInfo = map(artistId, getArtistinfo),
+         artist = artist %>% tolower) %>%
+  rename(track_popularity = popularity,
+         track_id = id) %>%
+  unnest(artistInfo) %>%
+  select(artist, id, name, popularity, followers)
+
+#get playlist
+#playlist Rainhas do Sertanejo owner = spotify | playlist_id = 37i9dQZF1DXcC14V9ZdJ9I
+rainhas_do_sertanejo_playlist <- getPlaylistSongs("spotify", "37i9dQZF1DXcC14V9ZdJ9I", token = keys) %>%
+  mutate(artistInfo = map(artistId, getArtistinfo),
+         artist = artist %>% tolower) %>%
+  rename(track_popularity = popularity,
+         track_id = id) %>%
+  unnest(artistInfo) %>%
+  select(artist, id, name, popularity, followers)
 ```
 
 
