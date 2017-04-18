@@ -1,0 +1,33 @@
+---
+title: "spotify-project"
+author: "Arthur"
+date: "17 de abril de 2017"
+output: 
+  html_document:
+   toc: true
+   toc_float: true
+   theme: lumen
+---
+
+```{r}
+#instala o Rspotify
+if(!require("Rspotify"))
+  devtools::install_github("tiagomendesdantas/Rspotify")
+
+#bibliotecas utilizadas
+library(Rspotify)
+library(magrittr)
+library(forcats)
+library(stringi)
+library(lubridate)
+library(httr)
+library(rvest)
+library(tidyverse)
+
+
+#autenticação
+keys <- spotifyOAuth("spotify-r-project","58fccb9a51434b5bab3cf8ce2274b997","4927c42e006a4c46a2308f79757bd582")
+
+```
+
+
