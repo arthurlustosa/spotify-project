@@ -1,12 +1,8 @@
 ---
-title: "spotify-project"
+title: "Untitled"
 author: "Arthur"
-date: "17 de abril de 2017"
-output: 
-  html_document:
-   toc: true
-   toc_float: true
-   theme: lumen
+date: "23 de abril de 2017"
+output: html_document
 ---
 
 ```{r}
@@ -35,7 +31,10 @@ vignette("tuber-ex", package="tuber")
 library(tuber)        # Acesso a API do YouTube
 library(streamgraph)
 
+```
 
+
+```{r}
 #autenticação
 keys <- spotifyOAuth("spotify-r-project","58fccb9a51434b5bab3cf8ce2274b997","4927c42e006a4c46a2308f79757bd582")
  
@@ -80,7 +79,7 @@ ranking_sertanejo <- esquenta_sertanejo_playlist %>%
             id_ = first(id),
             popularity_ = first(popularity))
 
-
+```
 ```
 
 
@@ -106,11 +105,11 @@ ranking_sertanejo <- esquenta_sertanejo_playlist %>%
 # InezitaBarroso
 # SuellenSantos UCQdlfEn8qhrDFHqUQ4VTsWA
 # TutaGuedes UCnXjJSjWW5WUKABJ8Y7KPYQ
+
 ```
 
 
 ```{r}
-#autenticando com youtube 
 yt_oauth(app_id = "273807722068-unnpeh2c9dju03oqjutnbnu9ogd4bcv7.apps.googleusercontent.com",
         app_secret = "QKhOlvht_TDhrWhSpleTMEA8")
 
@@ -122,10 +121,6 @@ get_videos <- function(dates, id_channel) {
             published_before = dates$end)
 }
 
-```
-
-
-```{r}
 dates <- tibble(start = seq(ymd("2008-01-01"), ymd("2017-01-01"), by = "years"),
                         end = seq(ymd("2008-12-31"), ymd("2017-12-31"), by = "years")) %>% 
   mutate(start = paste(start, "T0:00:00Z", sep = ""),
@@ -133,7 +128,6 @@ dates <- tibble(start = seq(ymd("2008-01-01"), ymd("2017-01-01"), by = "years"),
 ```
 
 ```{r}
-get_stats(video_id="Im69kzhpR3I")
 videos_MariliaMendonca <- by_row(.d = dates, "UCwfEOn0O1DWcyTgzVVu28ig", ..f = get_videos, .to = "videos_info")
 videos_Maiara_e_Maraisa <- by_row(.d = dates, "UCULzCZWkkOb9dW8rr6dguQQ", ..f = get_videos, .to = "videos_info")
 videos_Simone_e_Simaria <- by_row(.d = dates, "UCI4hPnUgXDCx1ebNDaM8_5Q", ..f = get_videos, .to = "videos_info")
@@ -153,22 +147,6 @@ videos_Lais <- by_row(.d = dates, "UC4tTBuX5h1TVCb144JeRw6A", ..f = get_videos, 
 videos_Bruna_e_Keyla <- by_row(.d = dates, "UCnDC6XP6F6HuOj0yCauMQjg", ..f = get_videos, .to = "videos_info")
 videos_SuellenSantos <- by_row(.d = dates, "UCQdlfEn8qhrDFHqUQ4VTsWA", ..f = get_videos, .to = "videos_info")
 videos_TutaGuedes <- by_row(.d = dates, "UCnXjJSjWW5WUKABJ8Y7KPYQ", ..f = get_videos, .to = "videos_info")
-
-
-```
-
-
-
-```{r}
-videos_stats <- function(data, name){
-   data %>% 
-   mutate(views = map(videos_stats, .f = 'viewCount')) %>% 
-   unnest(views )%>% 
-   mutate(views = as.numeric(views),
-           publishedAt = as_date(publishedAt),
-           Nome = name)
-  
-}
 ```
 
 ```{r}
@@ -178,9 +156,8 @@ get_videos_stats <- function(df_row) {
 }
 ```
 
-
 ```{r}
-dados_MariliaMendonca <- bind_rows(videos_gaga$videos_info) %>% 
+dados_MariliaMendonca <- bind_rows(videos_MariliaMendonca$videos_info) %>% 
   select(title, publishedAt, video_id) %>%
   by_row(..f = get_videos_stats, .to = "videos_stats")
 
@@ -188,7 +165,7 @@ dados_Maiara_e_Maraisa <- bind_rows(videos_Maiara_e_Maraisa$videos_info) %>%
   select(title, publishedAt, video_id) %>%
   by_row(..f = get_videos_stats, .to = "videos_stats")
 
-dados_MariliaMendonca <- bind_rows(videos_Simone_e_Simaria$videos_info) %>% 
+dados_Simone_e_Simaria <- bind_rows(videos_Simone_e_Simaria$videos_info) %>% 
   select(title, publishedAt, video_id) %>%
   by_row(..f = get_videos_stats, .to = "videos_stats")
 
@@ -196,25 +173,135 @@ dados_NaiaraAzevedo <- bind_rows(videos_NaiaraAzevedo$videos_info) %>%
   select(title, publishedAt, video_id) %>%
   by_row(..f = get_videos_stats, .to = "videos_stats")
 
+dados_Day_e_Lara <- bind_rows(videos_Day_e_Lara$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
 
-videos_Maiara_e_Maraisa <- by_row(.d = dates, "UCULzCZWkkOb9dW8rr6dguQQ", ..f = get_videos, .to = "videos_info")
-videos_Simone_e_Simaria <- by_row(.d = dates, "UCI4hPnUgXDCx1ebNDaM8_5Q", ..f = get_videos, .to = "videos_info")
-videos_NaiaraAzevedo <- by_row(.d = dates, "UCOfSEIUbEcOCMGPGyMPv4fg", ..f = get_videos, .to = "videos_info")
-videos_Day_e_Lara <- by_row(.d = dates, "UCd8mmNUy80y8n0wFgTCjC3A", ..f = get_videos, .to = "videos_info")
-videos_PaulaFernandes <- by_row(.d = dates, "UC1_7Qeu1LdDy5PTZ0vQE_sA", ..f = get_videos, .to = "videos_info")
-videos_PaulaMattos <- by_row(.d = dates, "UCMTUSMqhB0jDbcbyXZtcyFw", ..f = get_videos, .to = "videos_info")
-videos_Wanessa <- by_row(.d = dates, "UCmYVJBJV1fQgbgbfD0_VAhg", ..f = get_videos, .to = "videos_info")
-videos_Julia_e_Rafaela <- by_row(.d = dates, "UCG3u7pFuzyGjgkp0Ay378yA", ..f = get_videos, .to = "videos_info")
-videos_BrunaViola <- by_row(.d = dates, "UCl5pVPN7enAlN7ggYWNVoPQ", ..f = get_videos, .to = "videos_info")
-videos_RobertaMiranda <- by_row(.d = dates, "UCIaO7yvRbgBlx3JyLRRrtGA", ..f = get_videos, .to = "videos_info")
-videos_May_e_Karen <- by_row(.d = dates, "UCtWzhHO4T1VGfJfGXGEd5XQ", ..f = get_videos, .to = "videos_info")
-videos_Thaeme <- by_row(.d = dates, "UCor5q_SJKxPjg6SQxotXMzQ", ..f = get_videos, .to = "videos_info")
-videos_MylenaJardin <- by_row(.d = dates, "UCGTM9Y6OwRYBe-7eNFqX-lg", ..f = get_videos, .to = "videos_info")
-videos_FernandaCosta <- by_row(.d = dates, "UCu7F4QH_NehaYdDbeXNhbkw", ..f = get_videos, .to = "videos_info")
-videos_Lais <- by_row(.d = dates, "UC4tTBuX5h1TVCb144JeRw6A", ..f = get_videos, .to = "videos_info")
-videos_Bruna_e_Keyla <- by_row(.d = dates, "UCnDC6XP6F6HuOj0yCauMQjg", ..f = get_videos, .to = "videos_info")
-videos_SuellenSantos <- by_row(.d = dates, "UCQdlfEn8qhrDFHqUQ4VTsWA", ..f = get_videos, .to = "videos_info")
-videos_TutaGuedes <- by_row(.d = dates, "UCnXjJSjWW5WUKABJ8Y7KPYQ", ..f = get_videos, .to = "videos_info")
+dados_PaulaFernandes <- bind_rows(videos_PaulaFernandes$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
 
+dados_PaulaMattos <- bind_rows(videos_PaulaMattos$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_Wanessa <- bind_rows(videos_Wanessa$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_Julia_e_Rafaela <- bind_rows(videos_Julia_e_Rafaela$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_BrunaViola <- bind_rows(videos_BrunaViola$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_RobertaMiranda <- bind_rows(videos_RobertaMiranda$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_May_e_Karen <- bind_rows(videos_May_e_Karen$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_Thaeme <- bind_rows(videos_Thaeme$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_MylenaJardin <- bind_rows(videos_MylenaJardin$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_FernandaCosta <- bind_rows(videos_FernandaCosta$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_Lais <- bind_rows(videos_Lais$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_Bruna_e_Keyla <- bind_rows(videos_Bruna_e_Keyla$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_SuellenSantos <- bind_rows(videos_SuellenSantos$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_TutaGuedes <- bind_rows(videos_TutaGuedes$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+videos_stats <- function(data, name){
+   data %>% 
+   mutate(views = map(videos_stats, .f = 'viewCount')) %>% 
+   unnest(views )%>% 
+   mutate(views = as.numeric(views),
+           publishedAt = as_date(publishedAt),
+           Nome = name)
+  
+}
+
+
+#pegando estatisticas dos videos de cada cantora 
+videos_stats_MariliaMendonca <- videos_stats(dados_MariliaMendonca, "Marilia Mendonça")
+videos_stats_Maiara_e_Maraisa <- videos_stats(dados_Maiara_e_Maraisa, "Maiara e Maraisa")
+videos_stats_Simone_e_Simaria <- videos_stats(dados_Simone_e_Simaria, "Simone e Simaria")
+videos_stats_NaiaraAzevedo <- videos_stats(dados_NaiaraAzevedo, "Naiara Azevedo")
+videos_stats_Day_e_Lara <- videos_stats(dados_Day_e_Lara, "Day e Lara")
+videos_stats_PaulaFernandes <- videos_stats(dados_PaulaFernandes, "Paula Fernandes")
+videos_stats_PaulaMattos <- videos_stats(dados_PaulaMattos, "Paula Mattos")
+videos_stats_Wanessa <- videos_stats(dados_Wanessa, "Wanessa")
+videos_stats_Julia_e_Rafaela <- videos_stats(dados_Julia_e_Rafaela, "Julia e Rafaela")
+videos_stats_BrunaViola <- videos_stats(dados_BrunaViola, "Bruna Viola")
+videos_stats_RobertaMiranda <- videos_stats(dados_RobertaMiranda, "Roberta Miranda")
+videos_stats_May_e_Karen <- videos_stats(dados_May_e_Karen, "May e Karen")
+videos_stats_Thaeme <- videos_stats(dados_Thaeme, "Thaeme")
+#videos_stats_MylenaJardin <- videos_stats(dados_MylenaJardin, "Mylena Jardin")
+videos_stats_FernandaCosta <- videos_stats(dados_FernandaCosta, "Fernanda Costa")
+videos_stats_Lais <- videos_stats(dados_Lais, "Lais")
+#videos_stats_Bruna_e_Keyla <- videos_stats(dados_Bruna_e_Keyla, "Bruna e Keyla")
+videos_stats_SuellenSantos <- videos_stats(dados_SuellenSantos, "Suellen Santos")
+videos_stats_TutaGuedes <- videos_stats(dados_TutaGuedes, "Tuta Guedes")
+
+
+#montando dataset com as estatísticas de todos os vídeos
+videos_stats_RainhasSertanejo <- rbind(
+          videos_stats_MariliaMendonca,
+          videos_stats_Maiara_e_Maraisa,
+          videos_stats_Simone_e_Simaria,
+          videos_stats_NaiaraAzevedo,
+          videos_stats_Day_e_Lara,
+          videos_stats_PaulaFernandes,
+          videos_stats_PaulaMattos,
+          videos_stats_Wanessa,
+          videos_stats_Julia_e_Rafaela,
+          videos_stats_BrunaViola,
+          videos_stats_RobertaMiranda,
+          videos_stats_May_e_Karen,
+          videos_stats_Thaeme,
+          videos_stats_FernandaCosta,
+          videos_stats_Lais,
+          videos_stats_SuellenSantos,
+          videos_stats_TutaGuedes 
+        )
+
+#rainhas_sertanejo <- videos_stats_RainhasSertanejo %>%
+#  select(Nome, title, publishedAt, video_id, views)
+#write.csv(rainhas_sertanejo, "rainhas_sertanejo", row.names = F)
+#write.csv(resume_divas_pop, "info_videos_geral.csv", row.names = F)
+
+resume_rainhas_sertanejo <- rainhas_sertanejo %>%
+  mutate(ano = format(publishedAt,'%Y')) %>%
+  group_by(Nome, ano) %>%
+  summarise(total_views = sum(views))
+
+#write.csv(resume_rainhas_sertanejo, "info_videos_geral.csv", row.names = F)
+
+library(streamgraph)
+streamgraph(resume_rainhas_sertanejo, "Nome", "total_views", "ano")%>%
+  sg_axis_x(1, "year", "%Y") %>%
+  sg_axis_y(1, 5) %>%
+  sg_legend(TRUE, "Cantora: ")
 ```
-
