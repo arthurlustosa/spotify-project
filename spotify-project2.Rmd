@@ -80,7 +80,6 @@ ranking_sertanejo <- esquenta_sertanejo_playlist %>%
             popularity_ = first(popularity))
 
 ```
-```
 
 
 ```{r}
@@ -289,19 +288,59 @@ videos_stats_RainhasSertanejo <- rbind(
 
 #rainhas_sertanejo <- videos_stats_RainhasSertanejo %>%
 #  select(Nome, title, publishedAt, video_id, views)
-#write.csv(rainhas_sertanejo, "rainhas_sertanejo", row.names = F)
+#write.csv(rainhas_sertanejo, "rainhas_sertanejo.csv", row.names = F)
 #write.csv(resume_divas_pop, "info_videos_geral.csv", row.names = F)
 
+rainhas_sertanejo <- read.csv("projetos/spotify-project/dados/rainhas_sertanejo.csv")
+info_videos_geral <- read.csv("projetos/spotify-project/dados/info_videos_geral.csv")
+
 resume_rainhas_sertanejo <- rainhas_sertanejo %>%
-  mutate(ano = format(publishedAt,'%Y')) %>%
+  mutate(ano = as.Date(format(rainhas_sertanejo$publishedAt,  format = "%y"))) %>%
   group_by(Nome, ano) %>%
   summarise(total_views = sum(views))
 
+library(zoo)
+library(mondate)
+as.yearqtr(dat$DATE)
+
+resume_trimestral <- rainhas_sertanejo %>%
+  mutate(quarterYear =  as.yearqtr(as.Date(rainhas_sertanejo$publishedAt)),
+         ano = as.Date(format(rainhas_sertanejo$publishedAt, format= "%Y")))
+
+resume1 <- resume_trimestral %>%
+  group_by(Nome, ano, quarterYear) %>%
+  summarise(n = sum(views))
+
+resume2 <- resume_trimestral %>%
+  mutate(Nome = "Cantoras Sertanejas - YouTube", 
+         trimestre = as.Date(format(quarterYear,"%m"))) %>%
+  group_by(Nome, quarterYear, trimestre) %>%
+  summarise(n = mean(views))
 #write.csv(resume_rainhas_sertanejo, "info_videos_geral.csv", row.names = F)
 
-library(streamgraph)
-streamgraph(resume_rainhas_sertanejo, "Nome", "total_views", "ano")%>%
-  sg_axis_x(1, "year", "%Y") %>%
-  sg_axis_y(1, 5) %>%
-  sg_legend(TRUE, "Cantora: ")
 ```
+
+```{r}
+library(streamgraph)
+
+
+
+#Geral
+streamgraph(resume2, "Nome", "n", "quarterYear", offset="zero")%>%
+  sg_axis_x(tick_interval=4, tick_units="month") %>% 
+  sg_axis_y(1, 10)
+
+
+#Dividido por cantoras
+resume1 <- resume1 %>%
+  group_by(ano, quarterYear) %>%
+  summarise(total_views = as.integer(mean(n)))
+
+#consumo geral dividor por media trimestral
+streamgraph(resume1, "quarterYear", "total_views", "ano", offset = 'zero') %>% 
+  sg_axis_x(tick_interval=4, tick_units="%Y") %>% 
+  sg_axis_y(1,1) %>% 
+  sg_legend(TRUE, "Intervalo: ")
+
+```
+
