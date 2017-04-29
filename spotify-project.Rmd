@@ -1,7 +1,7 @@
 ---
-title: "spotify-project"
+title: "Consumo de música sertaneja feminina no Spotify e YouTube"
 author: "Arthur"
-date: "17 de abril de 2017"
+date: "23 de abril de 2017"
 output: 
   html_document:
    toc: true
@@ -9,47 +9,71 @@ output:
    theme: lumen
 ---
 
-```{r}
-#instala o Rspotify
-if(!require("Rspotify"))
-  devtools::install_github("tiagomendesdantas/Rspotify")
+Analisando o gosto musical dos meus amigos, percebei que muitos deles estavam escutando umas músicas novas em suas playlists. E quando essas músicas começavam a tocar, não tinha ninguém que ficasse calado ou mesmo parado. Isso mesmo, estou falando delas, das cantoras sertanejas! Quem não sabe, nem que seja, um trechinho de alguma música de Marília Mendoça ou aquela do famoso cinquenta reais (Naiara Azevedo), pois é, não tem como não conhecer. Vendo como as cantoras sertanejas conquistaram seu espaço nos últimos tempos, decidi analisar se houve realmente um *BOOM* no sertanejo feminino, e desde quando começou. 
+
+Existem dezenas de cantoras femininas, como filtrar e escolher as que mais representam essa parcela da música sertaneja? Para isso, escolhi uma playlist do Spotify, Rainhas do Sertanejo, que reune as cantoras que mais conquistaram o público nos últimos anos. Analisando essa playlist, dei uma scrapeada no spotify, consegui os dados dessa playlist (Artistas, popularidade, número de seguidores, e outros dados) e montei um ranking dessas artistas. Mas como analisar sua carreira em relação aos anos, a API do Spotify não disponibiliza dados segundo os anos, então tive que recorrer ao YouTube dessas cantoras e capturar esses dados. Fiz outro scrape, dessa vez no YouTube, e fiz a coleta dos dados dos canais dessas cantoras. 
+
+O processo de análise foi dividido em duas partes, a coleta dos dados e sua análise. 
+
+A captura dos dados envolveu o acesso a duas APIs a do Spotify e a do YouTube. Vamos agora ao processo de acesso aos dados do Spotify. O [Rspotify](https://github.com/tiagomendesdantas/Rspotify) é um pacote novo e não está disponível no CRAN, mas já está funcional.
+
+<h1>**Coleta dos Dados**</h3>
+
+<h2>**Passo 1: acessando API do Spotify**</h2>
+```{r, eval=F, message=F, warning=F}
+# instalando o Rspotify
+devtools::install_github("tiagomendesdantas/Rspotify")
+```
+
+Temos agora as bibliotecas que serão necessárias à nossa análise.
+```{r, message=F, warning=F}
+# instalando o Rspotify
+# devtools::install_github("tiagomendesdantas/Rspotify")
+
+# instalando o TubeR
+# devtools::install_github("soodoku/tuber", build_vignettes = TRUE)
 
 #bibliotecas utilizadas
-library(Rspotify)
-library(magrittr)
-library(forcats)
-library(stringi)
-library(lubridate)
-library(httr)
-library(rvest)
-library(tidyverse)
-library(dplyr)
-library(tibble)  
-library(lubridate)
-library(purrr)  
-library(tidyr)
-
-
-devtools::install_github("soodoku/tuber", build_vignettes = TRUE)
-vignette("tuber-ex", package="tuber")
+library(Rspotify)     # Acesso a API do Spotify
 library(tuber)        # Acesso a API do YouTube
-library(streamgraph)
+library(dplyr)        # Manipulação de dados
+library(tibble)       # Criação de dataframes
+library(lubridate)    # Manipulação de datas
+library(mondate)      # Manipulação de datas
+library(zoo)          # Manipulação de datas
+library(tidyr)        # Funcionais
+library(purrr)        # Funcionais
+library(plotly)       # Gráficos
+library(streamgraph)  # Gráficos
+```
 
+Com as dependências configuradas com sucesso, precisamos realizar a autenticação com o Spotify. (Não precisa dizer, mas é necessário ter uma conta no serviço).
+Para realizar a autenticação, é necessário ter em maos um app_id, um client_id e client_secret, o acesso a essas chaves é feito criando um App dentro da sua conta do Spotify, essa é a parte mais burocrática. O pacote Rspotify disponibiliza um tutorial para realizar esse cadastro [(veja aqui)](https://github.com/tiagomendesdantas/Rspotify).
+Credenciais em mãos é hora de acessar os dados.
 
-#autenticação
-keys <- spotifyOAuth("spotify-r-project","58fccb9a51434b5bab3cf8ce2274b997","4927c42e006a4c46a2308f79757bd582")
- 
+```{r, eval=F, message=F, warning=F}
+keys <- spotifyOAuth("app_id","client_id","client_secret")
+```
 
+Agora precisamos dos dados da playlist (Rainhas do Sertanejo) que usaremos como base. Para acessar o id e o dono da playlist veja o passo a passo [aqui](https://developer.spotify.com/web-api/get-playlist/). O método getPlaylistSongs(owner_playlist, playlist_id, keys) retorna um dataframe contendo as informações da playlist, no nosso caso, selecionamos *artist, id, name, popularity, followers*. 
 
-lolla2017_playlist <- getPlaylistSongs("lollabr", "1mHoPn6JpbtWtoBuvSXrVm", token = keys) %>%
+<h2>**Passo 1.2: carregando dados da playlist**</h2>
+```{r, eval=F, message=F, warning=F}
+# owner: spotify
+# playlist_id: 37i9dQZF1DXcC14V9ZdJ9I
+rainhas_do_sertanejo_playlist <- getPlaylistSongs("spotify", "37i9dQZF1DXcC14V9ZdJ9I", token = keys) %>%
   mutate(artistInfo = map(artistId, getArtistinfo),
          artist = artist %>% tolower) %>%
   rename(track_popularity = popularity,
          track_id = id) %>%
   unnest(artistInfo) %>%
   select(artist, id, name, popularity, followers)
+```
 
-#get playlist
+```{r, echo=F, eval=F, message=F, warning=F}
+#autenticação
+keys <- spotifyOAuth("spotify-r-project","58fccb9a51434b5bab3cf8ce2274b997","4927c42e006a4c46a2308f79757bd582")
+ 
 #playlist Rainhas do Sertanejo owner = spotify | playlist_id = 37i9dQZF1DXcC14V9ZdJ9I
 rainhas_do_sertanejo_playlist <- getPlaylistSongs("spotify", "37i9dQZF1DXcC14V9ZdJ9I", token = keys) %>%
   mutate(artistInfo = map(artistId, getArtistinfo),
@@ -59,7 +83,19 @@ rainhas_do_sertanejo_playlist <- getPlaylistSongs("spotify", "37i9dQZF1DXcC14V9Z
   unnest(artistInfo) %>%
   select(artist, id, name, popularity, followers)
 
+```
 
+```{r, echo=F}
+#write.csv(rainhas_do_sertanejo_playlist, "rainhas_do_sertanejo_playlist.csv", row.names = F)
+rainhas_do_sertanejo_playlist <- read.csv("dados/rainhas_do_sertanejo_playlist.csv")
+```
+
+```{r}
+head(rainhas_do_sertanejo_playlist)
+```
+
+
+```{r, echo=F, eval=F, message=F, warning=F}
 esquenta_sertanejo_playlist <- getPlaylistSongs("spotify", "37i9dQZF1DXdSjVZQzv2tl", token = keys) %>%
   mutate(artistInfo = map(artistId, getArtistinfo),
          artist = artist %>% tolower) %>%
@@ -67,24 +103,51 @@ esquenta_sertanejo_playlist <- getPlaylistSongs("spotify", "37i9dQZF1DXdSjVZQzv2
          track_id = id) %>%
   unnest(artistInfo) %>%
   select(artist, id, name, popularity, followers)
+```
 
-ranking_divas_sertanejas <- rainhas_do_sertanejo_playlist %>%
+Dando uma olhada nos nossos dados, montamos um ranking das cantoras sertanejas, baseado na sua popularidade no Spotify
+
+<h2>**Passo 1.3: ranking das cantoras**</h2>
+```{r, message=F, warning=F}
+#ranking das cantoras sertanejas
+ranking_cantoras_sertanejas <- rainhas_do_sertanejo_playlist %>%
   group_by(artist) %>%
   summarise(artist_ = first(artist),
             id_ = first(id),
-            popularity_ = first(popularity))
+            popularity_ = first(popularity),
+            nFollowers = first(followers))
 
+```
+
+
+```{r,  message=F, warning=F,fig.width=9, fig.height=5}
+margem <- list(l=60, r=60, b=100, t=100, pad=4) #margens do gŕafico
+plot_ly(ranking_cantoras_sertanejas,  
+        x = ~ranking_cantoras_sertanejas$artist_, 
+        y = ~ranking_cantoras_sertanejas$popularity_, 
+        type = 'scatter', 
+        color = ranking_cantoras_sertanejas$artist_, 
+        size = ~popularity_,
+        hoverinfo = 'text',
+        text = ~paste('Cantora: ', ranking_cantoras_sertanejas$artist_, 
+                      '</br> Popularidade: ', ranking_cantoras_sertanejas$popularity_,
+                      '</br> Seguidores: ', ranking_cantoras_sertanejas$nFollowers)) %>%
+        layout(title = "Ranking Cantoras Sertanejo by Popularidade Spotify", 
+              xaxis = list(title="", tickangle = 30),
+               yaxis = list(title="Popularidade"),
+               showlegend = FALSE,
+               margin=margem)
+```
+
+```{r, echo=F, eval=F, message=F, warning=F}
 ranking_sertanejo <- esquenta_sertanejo_playlist %>%
   group_by(artist) %>%
   summarise(artist_ = first(artist),
             id_ = first(id),
             popularity_ = first(popularity))
-
-
 ```
 
-
-```{r}
+```{r, echo=F, eval=F, message=F, warning=F}
 # MariliaMendonça UCwfEOn0O1DWcyTgzVVu28ig
 # Maiara_e_Maraisa UCULzCZWkkOb9dW8rr6dguQQ
 # Simone_e_Simaria UCI4hPnUgXDCx1ebNDaM8_5Q
@@ -108,9 +171,67 @@ ranking_sertanejo <- esquenta_sertanejo_playlist %>%
 # TutaGuedes UCnXjJSjWW5WUKABJ8Y7KPYQ
 ```
 
+Analisando o gráfico acima, vemos que as cantoras sertanejas mais populares no Spotify é Marília Mendonça com popularidade valendo 78, em segundo lugar a dupla Maiara e Maraisa com 73 e depois Simone e Simaria. A API do Spotify não disponíbiliza como é calculada a propriedade *popularity*. 
 
-```{r}
+Com a nossa lista das cantoras em mãos, utilizaremos a biblioteca tuber para acessar a API do YouTube e extrair as informações que necessitamos dos seus canais. 
+
+<h2>**Passo 2: acessando API do YouTube**</h2>
+```{r, eval=F, message=F, warning=F}
+#versão mais recente do pacote
+devtools::install_github("soodoku/tuber", build_vignettes = TRUE)
+
+#carregando bibliotecas necessarias
+library(tuber)  # Acesso a API do YouTube
+```
+
+Precisamos fazer a autenticação com o YouTube, é necessário um id e um secret. Para saber como fazer isso, siga o passo a passo disponível em [Configurando API YouTube](https://developers.google.com/youtube/v3/getting-started)
+Com seu id e secret em mão, agora vamos configurar o acesso do tuber à API.
+
+```{r, eval=F, echo=F}
 #autenticando com youtube 
+yt_oauth(app_id = "xxxx",
+        app_secret = "xxxxx")
+```
+
+```{r, eval=F, }
+#autenticando com youtube 
+yt_oauth(app_id = "id_secret",
+        app_secret = "toke_secret")
+```
+
+
+Se tudo ocorrer bem, após rodar o código acima, uma janela será aberta no seu navegador confirmando a autenticação, após isso você pode voltar para o RStudio e iniciar os trabalhos.
+
+<h2>**Passo 2.1: buscar os ids dos canais das cantoras**</h2>
+
+Precisamos do id do canal de cada cantora, conseguimos essa informação na url do youtube *www.youtube.com/channel/<**channel_id**>*. 
+
+A Função *tuber:: yt_search()* pesquisa por videos e sua informações. Mais detalhes sobre a biblioteca [tuber](https://github.com/soodoku/tuber).
+Por default, a função *yt_search()* possui um número máximo de requisições, 50 no total. Mas não desanime, podemos configurá-la setando seus parâmetros *type = “video”* e *channel_id = “id_de_algum_canal”*, o número de requisições passa para 500 resultados.
+Para facilitar e automatizar nosso trabalho, adaptei a função *get_videos()* que recebe como parâmetro um dataset contendo datas de início e de término (em um dataframe com apenas uma linha) e o id_do_canal (em formtato de string) e devolve todos os vídeos do canal nesse período. 
+
+```{r, eval=F}
+get_videos <- function(dates, id_channel) {
+  yt_search(term = "", 
+            type = "video",
+            channel_id = id_channel,
+            published_after = dates$start,
+            published_before = dates$end)
+}
+```
+
+Cada linha do dataframe de datas representa períodos de um ano, de 2009 a 2017. (2009 porque foi o ano em que a primeira cantora (Katy Perry) ingressou no YouTube). O mutate formata as datas no padrão exigido pela função *yt_search()*. Veja *help(yt_search)* para mais informações.
+
+```{r, eval=F}
+dates <- tibble(start = seq(ymd("2008-01-01"), ymd("2017-01-01"), by = "years"),
+                        end = seq(ymd("2008-12-31"), ymd("2017-12-31"), by = "years")) %>% 
+  mutate(start = paste(start, "T0:00:00Z", sep = ""),
+         end = paste(end, "T0:00:00Z", sep = ""))
+
+```
+
+
+````{r, echo=F, eval=F, message=F, warning=F}
 yt_oauth(app_id = "273807722068-unnpeh2c9dju03oqjutnbnu9ogd4bcv7.apps.googleusercontent.com",
         app_secret = "QKhOlvht_TDhrWhSpleTMEA8")
 
@@ -122,18 +243,19 @@ get_videos <- function(dates, id_channel) {
             published_before = dates$end)
 }
 
-```
-
-
-```{r}
 dates <- tibble(start = seq(ymd("2008-01-01"), ymd("2017-01-01"), by = "years"),
                         end = seq(ymd("2008-12-31"), ymd("2017-12-31"), by = "years")) %>% 
   mutate(start = paste(start, "T0:00:00Z", sep = ""),
          end = paste(end, "T0:00:00Z", sep = ""))
 ```
 
-```{r}
-get_stats(video_id="Im69kzhpR3I")
+Por fim, atribuímos ao objeto videos as informações de todos os vídeos do canal da cantora de 2008 até 2017. (Caso não possua vídeos nesse perído uma lista vazia será retornada). Por exemplo, vamos pegar as informações dos vídeos da cantora Marília Mendonça. O mesmo passo será realizado para as demais artistas.
+
+```{r, eval=F}
+videos_MariliaMendonca <- by_row(.d = dates, "UCwfEOn0O1DWcyTgzVVu28ig", ..f = get_videos, .to = "videos_info")
+```
+
+```{r, echo=F, eval=F, message=F, warning=F}
 videos_MariliaMendonca <- by_row(.d = dates, "UCwfEOn0O1DWcyTgzVVu28ig", ..f = get_videos, .to = "videos_info")
 videos_Maiara_e_Maraisa <- by_row(.d = dates, "UCULzCZWkkOb9dW8rr6dguQQ", ..f = get_videos, .to = "videos_info")
 videos_Simone_e_Simaria <- by_row(.d = dates, "UCI4hPnUgXDCx1ebNDaM8_5Q", ..f = get_videos, .to = "videos_info")
@@ -153,34 +275,32 @@ videos_Lais <- by_row(.d = dates, "UC4tTBuX5h1TVCb144JeRw6A", ..f = get_videos, 
 videos_Bruna_e_Keyla <- by_row(.d = dates, "UCnDC6XP6F6HuOj0yCauMQjg", ..f = get_videos, .to = "videos_info")
 videos_SuellenSantos <- by_row(.d = dates, "UCQdlfEn8qhrDFHqUQ4VTsWA", ..f = get_videos, .to = "videos_info")
 videos_TutaGuedes <- by_row(.d = dates, "UCnXjJSjWW5WUKABJ8Y7KPYQ", ..f = get_videos, .to = "videos_info")
-
-
 ```
 
+<h2>**Passo 3: pegar as estatísticas de cada vídeo do canal**</h2>
 
+Precisamos das estatísticas dos vídeos, para isso utilizei a função *get_videos_stats()* que recebe um dataframe de uma linha contendo uma coluna *$video_id* e usando a função *tuber::get_stats()*, faço o scrape das estatísticas do vídeo. 
 
-```{r}
-videos_stats <- function(data, name){
-   data %>% 
-   mutate(views = map(videos_stats, .f = 'viewCount')) %>% 
-   unnest(views )%>% 
-   mutate(views = as.numeric(views),
-           publishedAt = as_date(publishedAt),
-           Nome = name)
-  
-}
-```
-
-```{r}
+```{r, eval=F}
 #pegando estatísticas dos vídeos
 get_videos_stats <- function(df_row) {
   get_stats(video_id = df_row$video_id)
 }
+
 ```
 
+Hora de montar os datasets. Cada elemento da coluna *video_info* contém um dataframe com as informações dos vídeos de um determinado ano. Utilizando a função *dplyr::bind_rows()*, junteo esses dataframes em um só. Selecionamentos apenas as colunas de nosso interesse: *title*, *publishedAt* e *video_id*. Por fim, utilizei os id’s para baixar as estatítisca de cada vídeo usando a função *get_videos_stats()*. As estatísticas são salvas na coluna *$vídeos_stats* do dataframe resultado. 
 
-```{r}
-dados_MariliaMendonca <- bind_rows(videos_gaga$videos_info) %>% 
+```{r, eval=F}
+dados_MariliaMendonca <- bind_rows(videos_MariliaMendonca$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+```
+
+```{r, echo=F, eval=F, message=F, warning=F}
+#pegando informações de todos os vídeos dos canais das cantoras
+dados_MariliaMendonca <- bind_rows(videos_MariliaMendonca$videos_info) %>% 
   select(title, publishedAt, video_id) %>%
   by_row(..f = get_videos_stats, .to = "videos_stats")
 
@@ -188,7 +308,7 @@ dados_Maiara_e_Maraisa <- bind_rows(videos_Maiara_e_Maraisa$videos_info) %>%
   select(title, publishedAt, video_id) %>%
   by_row(..f = get_videos_stats, .to = "videos_stats")
 
-dados_MariliaMendonca <- bind_rows(videos_Simone_e_Simaria$videos_info) %>% 
+dados_Simone_e_Simaria <- bind_rows(videos_Simone_e_Simaria$videos_info) %>% 
   select(title, publishedAt, video_id) %>%
   by_row(..f = get_videos_stats, .to = "videos_stats")
 
@@ -196,25 +316,278 @@ dados_NaiaraAzevedo <- bind_rows(videos_NaiaraAzevedo$videos_info) %>%
   select(title, publishedAt, video_id) %>%
   by_row(..f = get_videos_stats, .to = "videos_stats")
 
+dados_Day_e_Lara <- bind_rows(videos_Day_e_Lara$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
 
-videos_Maiara_e_Maraisa <- by_row(.d = dates, "UCULzCZWkkOb9dW8rr6dguQQ", ..f = get_videos, .to = "videos_info")
-videos_Simone_e_Simaria <- by_row(.d = dates, "UCI4hPnUgXDCx1ebNDaM8_5Q", ..f = get_videos, .to = "videos_info")
-videos_NaiaraAzevedo <- by_row(.d = dates, "UCOfSEIUbEcOCMGPGyMPv4fg", ..f = get_videos, .to = "videos_info")
-videos_Day_e_Lara <- by_row(.d = dates, "UCd8mmNUy80y8n0wFgTCjC3A", ..f = get_videos, .to = "videos_info")
-videos_PaulaFernandes <- by_row(.d = dates, "UC1_7Qeu1LdDy5PTZ0vQE_sA", ..f = get_videos, .to = "videos_info")
-videos_PaulaMattos <- by_row(.d = dates, "UCMTUSMqhB0jDbcbyXZtcyFw", ..f = get_videos, .to = "videos_info")
-videos_Wanessa <- by_row(.d = dates, "UCmYVJBJV1fQgbgbfD0_VAhg", ..f = get_videos, .to = "videos_info")
-videos_Julia_e_Rafaela <- by_row(.d = dates, "UCG3u7pFuzyGjgkp0Ay378yA", ..f = get_videos, .to = "videos_info")
-videos_BrunaViola <- by_row(.d = dates, "UCl5pVPN7enAlN7ggYWNVoPQ", ..f = get_videos, .to = "videos_info")
-videos_RobertaMiranda <- by_row(.d = dates, "UCIaO7yvRbgBlx3JyLRRrtGA", ..f = get_videos, .to = "videos_info")
-videos_May_e_Karen <- by_row(.d = dates, "UCtWzhHO4T1VGfJfGXGEd5XQ", ..f = get_videos, .to = "videos_info")
-videos_Thaeme <- by_row(.d = dates, "UCor5q_SJKxPjg6SQxotXMzQ", ..f = get_videos, .to = "videos_info")
-videos_MylenaJardin <- by_row(.d = dates, "UCGTM9Y6OwRYBe-7eNFqX-lg", ..f = get_videos, .to = "videos_info")
-videos_FernandaCosta <- by_row(.d = dates, "UCu7F4QH_NehaYdDbeXNhbkw", ..f = get_videos, .to = "videos_info")
-videos_Lais <- by_row(.d = dates, "UC4tTBuX5h1TVCb144JeRw6A", ..f = get_videos, .to = "videos_info")
-videos_Bruna_e_Keyla <- by_row(.d = dates, "UCnDC6XP6F6HuOj0yCauMQjg", ..f = get_videos, .to = "videos_info")
-videos_SuellenSantos <- by_row(.d = dates, "UCQdlfEn8qhrDFHqUQ4VTsWA", ..f = get_videos, .to = "videos_info")
-videos_TutaGuedes <- by_row(.d = dates, "UCnXjJSjWW5WUKABJ8Y7KPYQ", ..f = get_videos, .to = "videos_info")
+dados_PaulaFernandes <- bind_rows(videos_PaulaFernandes$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_PaulaMattos <- bind_rows(videos_PaulaMattos$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_Wanessa <- bind_rows(videos_Wanessa$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_Julia_e_Rafaela <- bind_rows(videos_Julia_e_Rafaela$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_BrunaViola <- bind_rows(videos_BrunaViola$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_RobertaMiranda <- bind_rows(videos_RobertaMiranda$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_May_e_Karen <- bind_rows(videos_May_e_Karen$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_Thaeme <- bind_rows(videos_Thaeme$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_MylenaJardin <- bind_rows(videos_MylenaJardin$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_FernandaCosta <- bind_rows(videos_FernandaCosta$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_Lais <- bind_rows(videos_Lais$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_Bruna_e_Keyla <- bind_rows(videos_Bruna_e_Keyla$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_SuellenSantos <- bind_rows(videos_SuellenSantos$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+dados_TutaGuedes <- bind_rows(videos_TutaGuedes$videos_info) %>% 
+  select(title, publishedAt, video_id) %>%
+  by_row(..f = get_videos_stats, .to = "videos_stats")
+
+videos_stats <- function(data, name){
+   data %>% 
+   mutate(viewCount = map(data$videos_stats, .f = 'viewCount'),
+           likes = map(data$videos_stats, .f = 'likeCount'),
+           dislikes = map(data$videos_stats, .f = 'dislikeCount'))  %>% 
+   unnest(viewCount, likes, dislikes) %>% 
+   mutate(name = name, 
+          viewCount = as.numeric(viewCount),
+          likes = as.numeric(likes),
+          dislikes = as.numeric(dislikes),
+          publishedAt = as.Date(publishedAt))
+  
+}
+
+#pegando estatisticas dos videos de cada cantora 
+videos_stats_MariliaMendonca <- videos_stats(dados_MariliaMendonca, "Marilia Mendonça")
+videos_stats_Maiara_e_Maraisa <- videos_stats(dados_Maiara_e_Maraisa, "Maiara e Maraisa")
+videos_stats_Simone_e_Simaria <- videos_stats(dados_Simone_e_Simaria, "Simone e Simaria")
+videos_stats_NaiaraAzevedo <- videos_stats(dados_NaiaraAzevedo, "Naiara Azevedo")
+videos_stats_PaulaFernandes <- videos_stats(dados_PaulaFernandes, "Paula Fernandes")
+videos_stats_PaulaMattos <- videos_stats(dados_PaulaMattos, "Paula Mattos")
+videos_stats_Wanessa <- videos_stats(dados_Wanessa, "Wanessa")
+videos_stats_Julia_e_Rafaela <- videos_stats(dados_Julia_e_Rafaela, "Julia e Rafaela")
+videos_stats_BrunaViola <- videos_stats(dados_BrunaViola, "Bruna Viola")
+videos_stats_RobertaMiranda <- videos_stats(dados_RobertaMiranda, "Roberta Miranda")
+videos_stats_Thaeme <- videos_stats(dados_Thaeme, "Thaeme")
+videos_stats_FernandaCosta <- videos_stats(dados_FernandaCosta, "Fernanda Costa")
+videos_stats_Lais <- videos_stats(dados_Lais, "Lais")
+videos_stats_SuellenSantos <- videos_stats(dados_SuellenSantos, "Suellen Santos")
+videos_stats_TutaGuedes <- videos_stats(dados_TutaGuedes, "Tuta Guedes")
+
+
+#montando dataset com as estatísticas de todos os vídeos
+videos_stats_RainhasSertanejo <- rbind(
+          videos_stats_MariliaMendonca,
+          videos_stats_Maiara_e_Maraisa,
+          videos_stats_Simone_e_Simaria,
+          videos_stats_NaiaraAzevedo,
+          videos_stats_PaulaFernandes,
+          videos_stats_PaulaMattos,
+          videos_stats_Wanessa,
+          videos_stats_Julia_e_Rafaela,
+          videos_stats_BrunaViola,
+          videos_stats_RobertaMiranda,
+          videos_stats_Thaeme,
+          videos_stats_FernandaCosta,
+          videos_stats_Lais,
+          videos_stats_SuellenSantos
+        )
+
+#rainhas_sertanejo <- videos_stats_RainhasSertanejo %>%
+#  select(Nome, title, publishedAt, video_id, views)
+#write.csv(rainhas_sertanejo, "rainhas_sertanejo.csv", row.names = F)
+#write.csv(resume_divas_pop, "info_videos_geral.csv", row.names = F)
+
+
+#write.csv(resume_rainhas_sertanejo, "info_videos_geral.csv", row.names = F)
+#write.csv(dados_MariliaMendonca,  "dados_MariliaMendonca.csv", row.names = F)
+#write.csv(my.df, "videos_stats_Maiara_e_Maraisa.csv", row.names = F)
+#write.csv(my.df, "videos_stats_Wanessa.csv", row.names = F)
+#write.csv(my.df, "videos_stats_PaulaFernandes", row.names = F)
+
+
 
 ```
+
+```{r, echo=F}
+info_videos_geral <- read.csv("dados/info_videos_geral.csv")
+rainhas_sertanejo <- read.csv("dados/rainhas_sertanejo.csv")
+
+videos_stats_MariliaMendonca <-  read.csv("dados/videos_stats_MariliaMendonca.csv")
+videos_stats_Maiara_e_Maraisa <-  read.csv("dados/videos_stats_Maiara_e_Maraisa.csv")
+videos_stats_Wanessa <-  read.csv("dados/videos_stats_Wanessa.csv")
+videos_stats_PaulaFernandes <-  read.csv("dados/videos_stats_PaulaFernandes.csv")
+
+
+videos_stats_MariliaMendonca$publishedAt = as.Date(videos_stats_MariliaMendonca$publishedAt)
+videos_stats_Maiara_e_Maraisa$publishedAt = as.Date(videos_stats_Maiara_e_Maraisa$publishedAt)
+videos_stats_Wanessa$publishedAt = as.Date(videos_stats_Wanessa$publishedAt)
+videos_stats_PaulaFernandes$publishedAt = as.Date(videos_stats_PaulaFernandes$publishedAt)
+
+```
+
+Após o processamento, teremos um dataset no seguinte formato
+
+```{r}
+head(info_videos_geral)
+```
+
+Com os dados prontos, finalmente vamos para as análise. Para melhor estudarmos os resultados, vamos agrupar por ano e sumarisar os views. Como o número de views entre os vídeo é discrepante, decidi utilizar a escala de logarítmo para normalizar os dados.
+
+
+```{r}
+resume_rainhas_sertanejo <- rainhas_sertanejo %>%
+  mutate(date = (format(as.Date(rainhas_sertanejo$publishedAt),  format = "%d/%m/%Y")),
+         quarterYear =  as.yearqtr(as.Date(rainhas_sertanejo$publishedAt)),
+         year = format(as.Date(rainhas_sertanejo$publishedAt, format="%Y"),"%Y")) 
+
+resume_anual <- resume_rainhas_sertanejo %>%
+    group_by(Nome, year) %>%
+    summarise(mean_views = log(mean(as.numeric(views))))
+
+resume_anual$mean_views <- as.integer(resume_anual$mean_views)
+```
+
+<h1>**Análise dos Dados**</h3>
+
+<h2>**Passo 3: Os resultados**</h2>
+
+O objetivo com essa análise, é observar o crescimento do consumo de música sertaneja feminina, nos últimos anos. A partir dos dados obtidos, vamos verificar se existe realmente esse crescimento
+
+<h4>**Pergunta I:** *qual foi o ano em que o consumo de música sertaneja feminina começou a crescer?*</h4>
+
+<h4>**Média de Views por Ano**</h4>
+```{r, message=F, warning=F,fig.width=9, fig.height=5}
+#resume anual
+streamgraph(resume_anual, "Nome", "mean_views", "year", offset = 'zero') %>%
+  sg_axis_x(1, "year", "%Y") %>%
+  sg_axis_y(0, "year") 
+```
+
+O gráfico acima confima minha observação, não só meus amigos começaram a escutar esse gênero da música, como também os usuários do YouTube, 2015 é realmente o ano em que aconteceu essa explosão na música sertaneja feminina, o consumo de música aumentou bastante. Surge agora a pergunta, o que aconteceu nesse ano para que esse aumento ocorresse? Primeiro, depois de 2015 o número de cantoras no YouTube aumentou e com isso, a quantidade de views também. A visibilidade feminina no meio sertanejo aumentou muito, conquistando um espaço que antes pertencia mais aos cantores. 
+
+É importante ressaltar que os dados são acumulativos, ou seja, por exemplo, Marília Mendonça lançou um vídeo em 2015, a coleta capturou todos os views que esse vídeo teve desde a sua postagem até hoje.
+
+<h4>**Pergunta II:** *qual a tendência do número de views dos canais das cantoras?*</h4>
+
+Observando mais a fundo esse resultado, conseguimos ver uma tendência crescente no número de views dos canais das cantoras. Mas eu fui questionar, realemente todas estão crescendo? Para responder essa questão, analisei separadamente as duas cantoras que possuíam mais views (Marilia Mendonça, Maiara e Maraisa) e as que estão a mais tempo no YouTube (Paula Fernandes e Wanessa Camargo).
+
+Para comprovar se a tendência é crescente ou não, utilizei um mondelo de regressão linear simples que leva em consideração o número de views em decorrência do tempo.
+
+
+```{r, message=F, warning=F,fig.width=9, fig.height=5}
+library(broom)  # Regressao Linear Simples
+
+lm.MariliaMendonca <- lm(log(viewCount) ~ publishedAt, data= videos_stats_MariliaMendonca)
+```
+
+Podemos ver que a tendência do número de views dos vídeos de Marilia Mendonça é crescente, desde seu início em 2013 até o momento, vemos que os seus vídeos de 2015 estão bem acima da média o que aumenta mais ainda confiança de que foi em 2015 que a música sertaneja feminina estourou. 
+Além de observar a tendência, podemos ver quais foram os seus maiores sucessos.
+
+```{r, message=F, warning=F,fig.width=9, fig.height=5}
+plot_ly(videos_stats_MariliaMendonca, x = ~publishedAt, 
+        hoverinfo = 'text',
+        text = ~paste(title, 
+                      '</br> ViewCount: ', viewCount)) %>% 
+  add_markers(y = ~log(viewCount)) %>% 
+  add_lines(x = ~publishedAt, y = fitted(lm.MariliaMendonca)) %>%
+  layout(title = "Tendência do Número de Views - Marília Mendonça", 
+              xaxis = list(title="Ano", showgrid = FALSE),
+               yaxis = list(title="Número de Views", showticklabels = FALSE),
+               showlegend = FALSE)
+```
+
+Temos agora o histórico de views da dupla Maiara e Maraisa, vemos que a tendência é positiva e que os seus maiores sucessos encontram-se a partir de 2015.
+```{r, echo=F, message=F, warning=F,fig.width=9, fig.height=5}
+lm.MaiaraMaraisa <- lm(log(viewCount) ~ publishedAt, data= videos_stats_Maiara_e_Maraisa)
+
+plot_ly(videos_stats_Maiara_e_Maraisa, x = ~publishedAt, 
+        hoverinfo = 'text',
+        text = ~paste(title, 
+                      '</br> ViewCount: ', viewCount)) %>% 
+  add_markers(y = ~log(viewCount)) %>% 
+  add_lines(x = ~publishedAt, y = fitted(lm.MaiaraMaraisa)) %>%
+  layout(title = "Tendência do Número de Views - Maiara & Maraisa", 
+              xaxis = list(title="Ano", showgrid = FALSE),
+               yaxis = list(title="Número de Views", showticklabels = FALSE),
+               showlegend = FALSE)
+```
+
+Agora temos as artistas que estão a mais tempo no cenário da música sertaneja. Iniciamos com Wanessa Camargo que está no YouTube desde 2008. Observando sua trajetória, vemos que sua média de views é positiva, mas com crescimento não muito grande. Temos alguns sucessos que se destacam sendo os outliers.
+
+```{r, echo=F, message=F, warning=F,fig.width=9, fig.height=5}
+lm.Wanessa <- lm(log(viewCount) ~ publishedAt, data= videos_stats_Wanessa)
+
+plot_ly(videos_stats_Wanessa, x = ~publishedAt, 
+        hoverinfo = 'text',
+        text = ~paste(title, 
+                      '</br> ViewCount: ', viewCount)) %>% 
+  add_markers(y = ~log(viewCount)) %>% 
+  add_lines(x = ~publishedAt, y = fitted(lm.Wanessa)) %>%
+  layout(title = "Tendência do Número de Views - Wanessa Camargo", 
+              xaxis = list(title="Ano", showgrid = FALSE),
+               yaxis = list(title="Número de Views", showticklabels = FALSE),
+               showlegend = FALSE)
+```
+
+
+Encerrando as observações, temos o histórico da cantora Paula Fernandes. Se analisarmos o plot exibido antes, sobre o número geral de views das cantoras, ela é quem possui os maiores sucessos entre 2009 e 2011, porém com a ascenção das outras cantoras suas músicas tiveram uma queda com o decorrer do tempo. A tendência do número de visualizações em seu canal negativa. 
+```{r, echo=F, message=F, warning=F,fig.width=9, fig.height=5}
+lm.PaulaFernandes <- lm(log(viewCount) ~ publishedAt, data= videos_stats_PaulaFernandes)
+
+plot_ly(videos_stats_PaulaFernandes, x = ~publishedAt, 
+        hoverinfo = 'text',
+        text = ~paste(title, 
+                      '</br> ViewCount: ', viewCount)) %>% 
+  add_markers(y = ~log(viewCount)) %>% 
+  add_lines(x = ~publishedAt, y = fitted(lm.PaulaFernandes)) %>%
+  layout(title = "Tendência do Número de Views - Paula Fernandes", 
+              xaxis = list(title="Ano", showgrid = FALSE),
+               yaxis = list(title="Número de Views", showticklabels = FALSE),
+               showlegend = FALSE)
+```
+
+Ainda analisando os dados da cantora Paula Fernandes, é interessante observar que a queda no número de views acontece em paralelo com o aumento do número de cantoras sertanejas. Uma das possíveis explicações é que o aparecimento das duplas sertanejas femininas, algo que não era visto antes, lembrando que essa não é apenas uma especulação para uma explicação para a tendência negativa dos seus vídeos.
+
+<h1>**Conclusões**</h3>
+
+De uma observação simples, o fato dos meus amigos estarem escutando músicas sertanejas cantadas por mulheres, cheguei a conclusão que realmente, não só meus amigos, mas a população no geral está consumindo músicas femininas. Essa conclusão é realmente algo muito bom, pois a mulher cada vez mais está conquistando seu espaço.
+
+Não só a observação no conjunto geral das cantoras nos mostrou que essa tendência crescente no número de views existe realmente, foi também muito interessante ver o comportamento isolado de algumas cantoras, umas com o sucesso crescente e outras que se mantem firmes no mundo da música.
+
+Além das conclusões sobre o tema, esse trabalho tem sua importância pois trabalhamos com duas APIs bastante famosas, aprendemos a acessar e analisar os dados do Spotify, do YouTube, trabalhamos com várias bibliotecas de manipulação de dados e de datas, modelos lineares e bibliotecas gráficas como plotly e streamgraph. 
+
 
