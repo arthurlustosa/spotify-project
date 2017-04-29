@@ -6,7 +6,7 @@ output:
   html_document:
    toc: true
    toc_float: true
-   theme: lumen
+   theme: paper
 ---
 
 Analisando o gosto musical dos meus amigos, percebei que muitos deles estavam escutando umas músicas novas em suas playlists. E quando essas músicas começavam a tocar, não tinha ninguém que ficasse calado ou mesmo parado. Isso mesmo, estou falando delas, das cantoras sertanejas! Quem não sabe, nem que seja, um trechinho de alguma música de Marília Mendoça ou aquela do famoso cinquenta reais (Naiara Azevedo), pois é, não tem como não conhecer. Vendo como as cantoras sertanejas conquistaram seu espaço nos últimos tempos, decidi analisar se houve realmente um *BOOM* no sertanejo feminino, e desde quando começou. 
@@ -232,8 +232,6 @@ dates <- tibble(start = seq(ymd("2008-01-01"), ymd("2017-01-01"), by = "years"),
 
 
 ````{r, echo=F, eval=F, message=F, warning=F}
-yt_oauth(app_id = "273807722068-unnpeh2c9dju03oqjutnbnu9ogd4bcv7.apps.googleusercontent.com",
-        app_secret = "QKhOlvht_TDhrWhSpleTMEA8")
 
 get_videos <- function(dates, id_channel) {
   yt_search(term = "", 
